@@ -1,7 +1,7 @@
 use clap::{Clap, IntoApp};
 use clap_generate::{generate, generators::*};
 
-static BIN_NAME: &str = "kbl";
+static BIN_NAME: &str = "rbl";
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Command {
     /// show description of a pod
@@ -12,8 +12,6 @@ pub enum Command {
     IMAGE {name: String},
     /// show docker container id within a pod
     CONTAINER {name: String},
-    /// show owide
-    OWIDE {name: String},
     /// show log
     LOG {name: String},
 }
@@ -27,6 +25,7 @@ pub enum Shell {
 }
 
 #[derive(Clap, Clone, PartialEq, Debug)]
+#[clap(version = "0.1", author = "luyi666 <ly921225@gmail.com>")]
 pub struct Args {
     /// Generate a SHELL completion script and print to stdout
     #[clap(long, short, arg_enum, value_name = "SHELL")]
@@ -62,27 +61,27 @@ fn test_command() {
             completion: None,
             cmd: Some(Command::DELETE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["kbl", "delete", "sophon"])
+        Args::parse_from(&["rbl", "delete", "sophon"])
     );
     assert_eq!(
         Args {
             completion: None,
             cmd: Some(Command::IMAGE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["kbl", "image", "sophon"])
+        Args::parse_from(&["rbl", "image", "sophon"])
     );
     assert_eq!(
         Args {
             completion: None,
             cmd: Some(Command::DESCRIBE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["kbl", "describe", "sophon"])
+        Args::parse_from(&["rbl", "describe", "sophon"])
     );
     assert_eq!(
         Args {
             completion: None,
             cmd: Some(Command::CONTAINER {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["kbl", "container", "sophon"])
+        Args::parse_from(&["rbl", "container", "sophon"])
     );
 }
