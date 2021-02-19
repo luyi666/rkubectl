@@ -1,13 +1,14 @@
+use crate::args::Args;
+use crate::args::Command;
 use std::process;
 use itertools::Itertools;
 use std::convert::From;
 use anyhow::Result;
 use io::stdin;
 use std::io;
-use crate::args::Args;
-use crate::args::Command;
 use std::fmt;
 use str_distance::{DistanceMetric, Jaccard};
+use regex::Regex;
 
 pub struct Manager {
     args: Args
@@ -72,13 +73,25 @@ impl Manager {
     }
 
     fn get_kub_command(&self, command: &Command) -> Vec<String> {
-        let (cmd, pod_name_slice ) = match command  {
-            Command::DELETE { name } => ("delete", name),
-            Command::DESCRIBE {name} => ("describe", name),
-            Command::IMAGE {name} => ("Image", name),
-            Command::CONTAINER {name} => ("Container", name),
-            Command::LOG {name} => ("log", name),
+        let get_pod_name = || -> &str {
+            match command {
+                Command::DELETE { name } => name,
+                Command::DESCRIBE {name} => name,
+                Command::IMAGE {name} => name,
+                Command::CONTAINER {name} => name,
+                Command::LOG {name} => name,
+            }
         };
+        let pod_name_slice = get_pod_name();
+        // if RBL_SOPHON_ALIAS is set to anything, use sophon alias (to unset it use unset)
+        let insert_middle_name = self.args.middle.is_some();
+        let pod_name_slice = if insert_middle_name {
+            let middle_name = self.args.middle.as_ref().unwrap();
+            filled_with_middle_name(pod_name_slice, &middle_name[..])
+        } else {
+            pod_name_slice.to_string()
+        };
+        let pod_name_slice = &pod_name_slice;
         let candidate_pods = self.get_candidate_pod(pod_name_slice, false);
         if candidate_pods.len() == 0 {
             log::info!("no such a pod named like {} found!", pod_name_slice);
@@ -88,16 +101,16 @@ impl Manager {
                 log::info!("fuzzy match has no results...");
                 process::exit(0);
             } else {
-                handle_multiple_results(cmd, candidate_pods_fuzzy)
+                handle_multiple_results(command, candidate_pods_fuzzy)
             }
         }
         else if candidate_pods.len() > 1 {
             log::info!("multiple pods named like {} found!", pod_name_slice);
             log::info!("possible choices:");
-            handle_multiple_results(cmd, candidate_pods)
+            handle_multiple_results(command, candidate_pods)
         }
         else {
-            vec![get_kub_command(cmd, &candidate_pods[0].name[..])]
+            vec![get_kub_command(command, &candidate_pods[0].name[..])]
         }
     }
 
@@ -111,7 +124,8 @@ impl Manager {
             all_pods.into_iter().sorted_by(
                 |a, b|
                     Jaccard::new(1).str_distance(&a.name, pod_name_slice).partial_cmp(
-                    &Jaccard::new(1).str_distance(&b.name, pod_name_slice)).unwrap()).take(3).collect()
+                    &Jaccard::new(1).str_distance(&b.name, pod_name_slice)).unwrap()
+                ).take(3).collect()
         }
     }
 
@@ -150,7 +164,7 @@ fn convert_to_kub_info(s: &str) -> PodInfo {
     pod_info
 }
 
-fn handle_multiple_results(cmd: &str, candidate_pods: Vec<PodInfo>) -> Vec<String> {
+fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<String> {
     // list three choices
     let choices = ["a", "b", "c"];
     for (x, y) in choices.iter().zip(candidate_pods.iter()) {
@@ -186,14 +200,39 @@ fn handle_multiple_results(cmd: &str, candidate_pods: Vec<PodInfo>) -> Vec<Strin
     }
 }
 
-fn get_kub_command(cmd: &str, pod_name: &str) -> String {
-    if cmd == "delete" || cmd == "describe" {
-        format!("{} {} po {}", KUB_CTL, cmd, pod_name)
+fn get_kub_command(command: &Command, pod_name: &str) -> String {
+    match command {
+        Command::DELETE {name: _} => format!("{} delete po {}", KUB_CTL, pod_name),
+        Command::DESCRIBE {name: _} => format!("{} describe po {}", KUB_CTL, pod_name),
+        Command::LOG {name: _} => format!("{} logs {}", KUB_CTL, pod_name),
+        Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", KUB_CTL, pod_name),
+        Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
     }
-    else if cmd == "log" {
-        format!("{} logs {}", KUB_CTL, pod_name)
+}
+
+
+// if the input pod name is a component followed a version number, e.g. kg2,
+// can be converted to kg-sophon2 with `middle` name "-sophon"
+// this function is activated when `middle` option is set
+fn filled_with_middle_name(pod_name: &str, middle_name: &str) -> String {
+    let sophon_reg = Regex::new(r"(.*?)(\d*)$").unwrap();
+    if sophon_reg.is_match(pod_name) {
+        let caps = sophon_reg.captures(pod_name).unwrap();
+        format!("{}{}{}", caps.get(1).unwrap().as_str(), middle_name, caps.get(2).unwrap().as_str()).to_string()
+    } else {
+        pod_name.to_string()
     }
-    else {
-        format!("{} describe po {} | grep {}", KUB_CTL, pod_name, cmd)
-    }
+}
+
+#[test]
+fn test_insert_middle_name() {
+    assert_eq!(filled_with_middle_name("kg2", "-sophon"), "kg-sophon2");
+    assert_eq!(filled_with_middle_name("base22", "-sophon"), "base-sophon22");
+    assert_eq!(filled_with_middle_name("notebook", "-sophon"), "notebook-sophon");
+    assert_eq!(filled_with_middle_name("gk22", "-sophon"), "gk-sophon22");
+    assert_eq!(filled_with_middle_name("datanode1", "-hdfs"), "datanode-hdfs1");
+    assert_eq!(filled_with_middle_name("2222", "-test"), "-test2222");
+    assert_eq!(filled_with_middle_name("s2s22", "-test"), "s2s-test22");
+    assert_eq!(filled_with_middle_name("222s22", "-test"), "222s-test22");
+    assert_eq!(filled_with_middle_name("s", "-test"), "s-test");
 }

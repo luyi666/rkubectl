@@ -4,15 +4,15 @@ use clap_generate::{generate, generators::*};
 static BIN_NAME: &str = "rbl";
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Command {
-    /// show description of a pod
+    /// Show description of a pod
     DESCRIBE {name: String},
-    /// delete a pod
+    /// Delete a pod
     DELETE {name: String},
-    /// show image of a pod
+    /// Show image of a pod
     IMAGE {name: String},
-    /// show docker container id within a pod
+    /// Show docker container id within a pod
     CONTAINER {name: String},
-    /// show log
+    /// Show log
     LOG {name: String},
 }
 #[derive(Clap, Clone, PartialEq, Debug)]
@@ -30,8 +30,12 @@ pub struct Args {
     /// Generate a SHELL completion script and print to stdout
     #[clap(long, short, arg_enum, value_name = "SHELL")]
     pub completion: Option<Shell>,
+    /// Subcommands to show pod info
     #[clap(subcommand)]
     pub cmd: Option<Command>,
+    /// Insert a middle name between component and version number (kg2 -> kg-sophon2, with middle name "-sophon")
+    #[clap(long, short)]
+    pub middle: Option<String>,
 }
 
 impl Shell {
@@ -59,6 +63,7 @@ fn test_command() {
     assert_eq!(
         Args {
             completion: None,
+            middle: None,
             cmd: Some(Command::DELETE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rbl", "delete", "sophon"])
@@ -66,6 +71,7 @@ fn test_command() {
     assert_eq!(
         Args {
             completion: None,
+            middle: None,
             cmd: Some(Command::IMAGE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rbl", "image", "sophon"])
@@ -73,6 +79,7 @@ fn test_command() {
     assert_eq!(
         Args {
             completion: None,
+            middle: None,
             cmd: Some(Command::DESCRIBE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rbl", "describe", "sophon"])
@@ -80,6 +87,7 @@ fn test_command() {
     assert_eq!(
         Args {
             completion: None,
+            middle: None,
             cmd: Some(Command::CONTAINER {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rbl", "container", "sophon"])
