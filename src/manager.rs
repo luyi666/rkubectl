@@ -1,13 +1,14 @@
+use crate::args::Args;
+use crate::args::Command;
 use std::process;
 use itertools::Itertools;
 use std::convert::From;
 use anyhow::Result;
 use io::stdin;
 use std::io;
-use crate::args::Args;
-use crate::args::Command;
 use std::fmt;
 use str_distance::{DistanceMetric, Jaccard};
+use regex::Regex;
 
 pub struct Manager {
     args: Args
@@ -79,6 +80,15 @@ impl Manager {
             Command::CONTAINER {name} => ("Container", name),
             Command::LOG {name} => ("log", name),
         };
+        // if RBL_SOPHON_ALIAS is set to anything, use sophon alias (to unset it use unset)
+        let insert_middle_name = self.args.middle.is_some();
+        let pod_name_slice = if insert_middle_name {
+            let middle_name = self.args.middle.as_ref().unwrap();
+            filled_with_middle_name(pod_name_slice, &middle_name[..])
+        } else {
+            pod_name_slice.to_string()
+        };
+        let pod_name_slice = &pod_name_slice;
         let candidate_pods = self.get_candidate_pod(pod_name_slice, false);
         if candidate_pods.len() == 0 {
             log::info!("no such a pod named like {} found!", pod_name_slice);
@@ -111,7 +121,8 @@ impl Manager {
             all_pods.into_iter().sorted_by(
                 |a, b|
                     Jaccard::new(1).str_distance(&a.name, pod_name_slice).partial_cmp(
-                    &Jaccard::new(1).str_distance(&b.name, pod_name_slice)).unwrap()).take(3).collect()
+                    &Jaccard::new(1).str_distance(&b.name, pod_name_slice)).unwrap()
+                ).take(3).collect()
         }
     }
 
@@ -196,4 +207,31 @@ fn get_kub_command(cmd: &str, pod_name: &str) -> String {
     else {
         format!("{} describe po {} | grep {}", KUB_CTL, pod_name, cmd)
     }
+}
+
+
+// if the input pod name is a component followed a version number, e.g. kg2,
+// can be converted to kg-sophon2 with `middle` name "-sophon"
+// this function is activated when `middle` option is set
+fn filled_with_middle_name(pod_name: &str, middle_name: &str) -> String {
+    let sophon_reg = Regex::new(r"(.*?)(\d*)$").unwrap();
+    if sophon_reg.is_match(pod_name) {
+        let caps = sophon_reg.captures(pod_name).unwrap();
+        format!("{}{}{}", caps.get(1).unwrap().as_str(), middle_name, caps.get(2).unwrap().as_str()).to_string()
+    } else {
+        pod_name.to_string()
+    }
+}
+
+#[test]
+fn test_insert_middle_name() {
+    assert_eq!(filled_with_middle_name("kg2", "-sophon"), "kg-sophon2");
+    assert_eq!(filled_with_middle_name("base22", "-sophon"), "base-sophon22");
+    assert_eq!(filled_with_middle_name("notebook", "-sophon"), "notebook-sophon");
+    assert_eq!(filled_with_middle_name("gk22", "-sophon"), "gk-sophon22");
+    assert_eq!(filled_with_middle_name("datanode1", "-hdfs"), "datanode-hdfs1");
+    assert_eq!(filled_with_middle_name("2222", "-test"), "-test2222");
+    assert_eq!(filled_with_middle_name("s2s22", "-test"), "s2s-test22");
+    assert_eq!(filled_with_middle_name("222s22", "-test"), "222s-test22");
+    assert_eq!(filled_with_middle_name("s", "-test"), "s-test");
 }
