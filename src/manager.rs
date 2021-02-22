@@ -67,11 +67,14 @@ impl Manager {
         let mut command_output = Vec::new();
         for kub_command in kub_commands {
             log::info!("{}", kub_command);
-            let output = std::process::Command::new("sh")
-                .arg("-c")
-                .arg(kub_command)
-                .output().expect("failed to execute cmd");
-            command_output.push(String::from_utf8_lossy(&output.stdout).to_string());
+            // following code block is not executed while debugging
+            if cfg!(not(debug_assertions)) {
+                let output = std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(kub_command)
+                    .output().expect("failed to execute cmd");
+                command_output.push(String::from_utf8_lossy(&output.stdout).to_string());
+            }
         }
         Ok(command_output.join("\n"))
     }
@@ -87,7 +90,6 @@ impl Manager {
             }
         };
         let pod_name_slice = get_pod_name();
-        // if RBL_SOPHON_ALIAS is set to anything, use sophon alias (to unset it use unset)
         let insert_middle_name = self.args.middle.is_some();
         let pod_name_slice = if insert_middle_name {
             let middle_name = self.args.middle.as_ref().unwrap();
@@ -129,36 +131,41 @@ impl Manager {
                 |a, b|
                     Jaccard::new(1).str_distance(&a.name, pod_name_slice).partial_cmp(
                     &Jaccard::new(1).str_distance(&b.name, pod_name_slice)).unwrap()
-                ).take(3).collect()
+                ).take(MAX_CANDIDATE_SIZE).collect()
         }
     }
 
     fn list_pods(&self) -> Vec<PodInfo> {
-        // let test_pod = "
-        //     sophon-apimanager-sophon2-58f4b7965-n99hz                      1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-approval-sophon2-7748d4b87b-rt8zr                       1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-audit-sophon2-654889f8c-g8xjc                           1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-base-sophon2-557b9f49d4-xf95j                           1/1     Running             0          9d      172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-gateway-sophon2-6dbf875495-dckc4                        1/1     Running             5          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-jobmanager-sophon2-5f4df546f6-pld27                     1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-kg-sophon2-bf9769d97-4hqgv                              1/1     Running             0          56m     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-notebook-sophon2-57f5c77786-8lpkw                       1/1     Running             0          20h     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-notification-sophon2-6bc6b754ff-59nbc                   1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-resource-sophon2-5fc7f9dcb7-j7srl                       1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-retrieve-sophon2-f5789bdb4-r7qcg                        1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-session-sophon2-58cd56dbf9-slcjp                        1/1     Running             4          10d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-share-sophon2-7b5795b4d4-gcqwv                          1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-ui-sophon2-79c997dd8c-vkths                             1/1     Running             1          9d      172.26.0.124   kg-node43   <none>           <none>
-        //     sophon-user-sophon2-6586dd74c4-r4ndp                           1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
-        // ";
-        // let kub_info: Vec<PodInfo> = test_pod.trim().split("\n").map(convert_to_kub_info).collect();
-        // kub_info
-        let output = std::process::Command::new("sh")
-                     .arg("-c")
-                     .arg(format!("{} get po -owide | tail -n+2", KUB_CTL))
-                     .output()
-                     .expect("failed to execute kubectl get po");
-        String::from_utf8_lossy(&output.stdout).to_string().trim().split("\n").map(convert_to_kub_info).collect()
+        if cfg!(debug_assertions) {
+            // debug code
+            let test_pod = "
+                sophon-apimanager-sophon2-58f4b7965-n99hz                      1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-approval-sophon2-7748d4b87b-rt8zr                       1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-audit-sophon2-654889f8c-g8xjc                           1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-base-sophon2-557b9f49d4-xf95j                           1/1     Running             0          9d      172.26.0.124   kg-node43   <none>           <none>
+                sophon-gateway-sophon2-6dbf875495-dckc4                        1/1     Running             5          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-jobmanager-sophon2-5f4df546f6-pld27                     1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-kg-sophon2-bf9769d97-4hqgv                              1/1     Running             0          56m     172.26.0.124   kg-node43   <none>           <none>
+                sophon-notebook-sophon2-57f5c77786-8lpkw                       1/1     Running             0          20h     172.26.0.124   kg-node43   <none>           <none>
+                sophon-notification-sophon2-6bc6b754ff-59nbc                   1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-resource-sophon2-5fc7f9dcb7-j7srl                       1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-retrieve-sophon2-f5789bdb4-r7qcg                        1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-session-sophon2-58cd56dbf9-slcjp                        1/1     Running             4          10d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-share-sophon2-7b5795b4d4-gcqwv                          1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+                sophon-ui-sophon2-79c997dd8c-vkths                             1/1     Running             1          9d      172.26.0.124   kg-node43   <none>           <none>
+                sophon-user-sophon2-6586dd74c4-r4ndp                           1/1     Running             4          12d     172.26.0.124   kg-node43   <none>           <none>
+            ";
+            let kub_info: Vec<PodInfo> = test_pod.trim().split("\n").map(convert_to_kub_info).collect();
+            kub_info
+        } else {
+            // release code
+            let output = std::process::Command::new("sh")
+                        .arg("-c")
+                        .arg(format!("{} get po -owide | tail -n+2", KUB_CTL))
+                        .output()
+                        .expect("failed to execute kubectl get po");
+            String::from_utf8_lossy(&output.stdout).to_string().trim().split("\n").map(convert_to_kub_info).collect()
+        }
     }
 }
 
@@ -185,7 +192,7 @@ fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<S
     let input_choice = &input.trim().to_lowercase();
     if input_choice.len() != 1 || !choices.contains(input_choice) && input_choice != "z" {
         log::error!("input is not a valid option");
-                process::exit(1)
+        process::exit(1)
     } else {
         let input_char: char = input_choice.chars().next().unwrap();
         if input_char == 'z' {
