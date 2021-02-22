@@ -15,6 +15,7 @@ pub struct Manager {
     args: Args
 }
 static KUB_CTL: &str = "kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem --client-certificate=/srv/kubernetes/admin.pem  --client-key=/srv/kubernetes/admin-key.pem";
+static MAX_CANDIDATE_SIZE: usize = 5;
 
 // PodInfo with kubectl get po -owide
 #[derive(Debug)]
@@ -166,37 +167,34 @@ fn convert_to_kub_info(s: &str) -> PodInfo {
 }
 
 fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<String> {
-    // list three choices
-    let choices = ["a", "b", "c"];
-    for (x, y) in choices.iter().zip(candidate_pods.iter()) {
+    // get candidate size
+    let candidate_size: usize = match std::env::var("RBL_CANDIDATE_SIZE").map(|s| s.parse()) {
+        Ok(Ok(n)) => if n < 1 {MAX_CANDIDATE_SIZE} else {n}, // this is nested Result, env::var could fail && parse could fail
+        _ => MAX_CANDIDATE_SIZE // if it fails for whatever cause, set as MAX_CANDIATE_SIZE
+    };
+    let choices = get_candidate_option(candidate_size);
+    for (x, y) in choices.chars().zip(candidate_pods.iter()) {
         log::info!{"{}: {}", x, y};
     }
-    log::info!("d: apply to all");
+    log::info!("z: apply to all");
     log::info!("type your choice...");
     let mut input = String::new();
     stdin().read_line(&mut input).unwrap();
-    let input_choice = &input.trim().to_lowercase()[..];
-    match input_choice {
-        "a" => vec![get_kub_command(cmd, &candidate_pods[0].name[..])],
-        "b" => vec![get_kub_command(cmd, &candidate_pods[1].name[..])],
-        "c" => {
-            if candidate_pods.len() > 2 {
-                vec![get_kub_command(cmd, &candidate_pods[2].name[..])]
-            } else {
-                log::error!("no such a choice {}", input_choice);
+    let input_choice = &input.trim().to_lowercase();
+    if input_choice.len() != 1 || !choices.contains(input_choice) && input_choice != "z" {
+        log::error!("input is not a valid option");
                 process::exit(1)
-            }
-        }
-        "d" => {
+    } else {
+        let input_char: char = input_choice.chars().next().unwrap();
+        if input_char == 'z' {
             let mut kub_cmds = Vec::new();
             for candidate_pod in candidate_pods {
                 kub_cmds.push(get_kub_command(cmd, &candidate_pod.name[..]));
             }
             kub_cmds
-        }
-        _ => {
-            log::error!("no such a choice {}", input_choice);
-            process::exit(1)
+        } else {
+            let choice_index = choices.chars().position(|c| c == input_char).unwrap();
+            vec![get_kub_command(cmd, &candidate_pods[choice_index].name[..])]
         }
     }
 }
