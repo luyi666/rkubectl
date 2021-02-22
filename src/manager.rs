@@ -14,6 +14,8 @@ use regex::Regex;
 pub struct Manager {
     args: Args
 }
+
+// check `which kubectl` && configure your kubectl command
 static KUB_CTL: &str = "kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem --client-certificate=/srv/kubernetes/admin.pem  --client-key=/srv/kubernetes/admin-key.pem";
 static MAX_CANDIDATE_SIZE: usize = 5;
 
