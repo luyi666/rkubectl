@@ -7,6 +7,7 @@ use anyhow::Result;
 use io::stdin;
 use std::io;
 use std::fmt;
+use std::cmp;
 use str_distance::{DistanceMetric, Jaccard};
 use regex::Regex;
 
@@ -235,4 +236,21 @@ fn test_insert_middle_name() {
     assert_eq!(filled_with_middle_name("s2s22", "-test"), "s2s-test22");
     assert_eq!(filled_with_middle_name("222s22", "-test"), "222s-test22");
     assert_eq!(filled_with_middle_name("s", "-test"), "s-test");
+}
+
+fn get_candidate_option(candidate_size: usize) -> String {
+    // hard to index utf8, convert to chars and index with O(1) cost
+    let alphabet = String::from_utf8(
+        (b'a'..=b'z').collect()
+    ).unwrap().chars().take(cmp::min(MAX_CANDIDATE_SIZE, candidate_size)).collect();
+    alphabet
+}
+
+#[test]
+fn test_get_candidate_option() {
+    let alphabet = get_candidate_option(3);
+    assert_eq!("abc", alphabet);
+    // getting max candidate size
+    let alphabet = get_candidate_option(100);
+    assert_eq!("abcde", alphabet);
 }
