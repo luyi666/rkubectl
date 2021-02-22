@@ -54,12 +54,6 @@ impl Shell {
 }
 
 #[test]
-fn test_no_cmd() {
-    let result = Args::try_parse_from(&["kbl"]);
-    assert!(result.is_err());
-}
-
-#[test]
 fn test_command() {
     assert_eq!(
         Args {
