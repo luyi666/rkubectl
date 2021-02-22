@@ -196,8 +196,8 @@ fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<S
         let input_char: char = input_choice.chars().next().unwrap();
         if input_char == 'z' {
             let mut kub_cmds = Vec::new();
-            for candidate_pod in candidate_pods {
-                kub_cmds.push(get_kub_command(cmd, &candidate_pod.name[..]));
+            for candidate_idx in 0..candidate_size {
+                kub_cmds.push(get_kub_command(cmd, &candidate_pods[candidate_idx].name[..]));
             }
             kub_cmds
         } else {
