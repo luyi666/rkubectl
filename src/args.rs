@@ -1,6 +1,7 @@
 use clap::{Clap, IntoApp};
 use clap_generate::{generate, generators::*};
 
+// in line with the [[bin]] name in Cargo.toml
 static BIN_NAME: &str = "rbl";
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Command {
