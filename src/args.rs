@@ -1,6 +1,7 @@
 use clap::{Clap, IntoApp};
 use clap_generate::{generate, generators::*};
 
+// in line with the [[bin]] name in Cargo.toml
 static BIN_NAME: &str = "rbl";
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Command {
@@ -50,12 +51,6 @@ impl Shell {
             Shell::Elvish => generate::<Elvish, _>(&mut app, BIN_NAME, &mut fd),
         }
     }
-}
-
-#[test]
-fn test_no_cmd() {
-    let result = Args::try_parse_from(&["kbl"]);
-    assert!(result.is_err());
 }
 
 #[test]
