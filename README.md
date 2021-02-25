@@ -1,4 +1,4 @@
-# rkubctl
+# rkubectl
 A command line application which provides ***ShotCuts*** to kubectl commands written in rust.
 
 This project is devoted to sophon developers at Transwarp.  
@@ -14,7 +14,7 @@ It is tedious to inspect pod info when the number of pods is large. This project
 
 You can show help message with `rbl -h`
 ```
-rkubctl 0.1
+rkubectl 0.1
 luyi666 <ly921225@gmail.com>
 
 USAGE:
