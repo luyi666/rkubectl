@@ -3,20 +3,20 @@
 cargo clean
 # build
 cargo build --release
-# cp rbl to /usr/local/bin
-cp target/release/rbl /usr/local/bin
+# cp rkl to /usr/local/bin
+cp target/release/rkl /usr/local/bin
 # generate auto complete script
-rbl -c bash > ~/.rbl_complete.sh
+rkl -c bash > ~/.rkl_complete.sh
 # deploy to other kg nodes
-scp target/release/rbl kg-node43:/usr/local/bin
-scp target/release/rbl kg-node44:/usr/local/bin
-scp target/release/rbl kg-node45:/usr/local/bin
-scp ~/.rbl_complete.sh kg-node43:~/.rbl_complete.sh
-scp ~/.rbl_complete.sh kg-node44:~/.rbl_complete.sh
-scp ~/.rbl_complete.sh kg-node45:~/.rbl_complete.sh
-# source ~/.rbl_complete.sh in .bash_profile.sh on each node kg-node43 -- kg-node46
+scp target/release/rkl kg-node43:/usr/local/bin
+scp target/release/rkl kg-node44:/usr/local/bin
+scp target/release/rkl kg-node45:/usr/local/bin
+scp ~/.rkl_complete.sh kg-node43:~/.rkl_complete.sh
+scp ~/.rkl_complete.sh kg-node44:~/.rkl_complete.sh
+scp ~/.rkl_complete.sh kg-node45:~/.rkl_complete.sh
+# source ~/.rkl_complete.sh in .bash_profile.sh on each node kg-node43 -- kg-node46
 ###########################################
-# if [ -f ~/.rbl_complete.sh ]; then
-#         . ~/.rbl_complete.sh
+# if [ -f ~/.rkl_complete.sh ]; then
+#         . ~/.rkl_complete.sh
 # fi
 ###########################################

@@ -88,6 +88,7 @@ impl Manager {
                 Command::IMAGE {name} => name,
                 Command::CONTAINER {name} => name,
                 Command::LOG {name} => name,
+                Command::EXEC {name} => name,
             }
         };
         let pod_name_slice = get_pod_name();
@@ -179,7 +180,7 @@ fn convert_to_kub_info(s: &str) -> PodInfo {
 fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<String> {
     // get candidate size
     let candidate_size = get_candidate_size();
-    log::info!("you are getting candidate size of {}, try to alter env RBL_CANDIDATE_SIZE to view more", candidate_size);
+    log::info!("you are getting candidate size of {}, try to alter env RKL_CANDIDATE_SIZE to view more", candidate_size);
     let choices = get_candidate_option(candidate_size);
     for (x, y) in choices.chars().zip(candidate_pods.iter()) {
         log::info!{"{}: {}", x, y};
@@ -214,6 +215,7 @@ fn get_kub_command(command: &Command, pod_name: &str) -> String {
         Command::LOG {name: _} => format!("{} logs {}", KUB_CTL, pod_name),
         Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", KUB_CTL, pod_name),
         Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
+        Command::EXEC {name: _} => format!("{} exec -it {}", KUB_CTL, pod_name),
     }
 }
 
@@ -262,7 +264,7 @@ fn test_get_candidate_option() {
 }
 
 fn get_candidate_size() -> usize {
-    match std::env::var("RBL_CANDIDATE_SIZE").map(|s| s.parse()) {
+    match std::env::var("RKL_CANDIDATE_SIZE").map(|s| s.parse()) {
         Ok(Ok(n)) => if n < 1 {DEFAULT_CANDIDATE_SIZE} else {cmp::min(n, MAX_CANDIDATE_SIZE)}, // this is nested Result, env::var could fail && parse could fail
         _ => DEFAULT_CANDIDATE_SIZE // if it fails for whatever cause, set as DEFAULT_CANDIATE_SIZE
     }
@@ -270,14 +272,14 @@ fn get_candidate_size() -> usize {
 
 #[test]
 fn test_get_candiate_size() {
-    // without env "RBL_CANDIDATE_SIZE", get default size
+    // without env "RKL_CANDIDATE_SIZE", get default size
     assert_eq!(get_candidate_size(), DEFAULT_CANDIDATE_SIZE);
-    std::env::set_var("RBL_CANDIDATE_SIZE", "100");
+    std::env::set_var("RKL_CANDIDATE_SIZE", "100");
     // for size that is too large, get max size
     assert_eq!(get_candidate_size(), MAX_CANDIDATE_SIZE);
     // for invalid size, get default size
-    std::env::set_var("RBL_CANDIDATE_SIZE", "-1");
+    std::env::set_var("RKL_CANDIDATE_SIZE", "-1");
     assert_eq!(get_candidate_size(), DEFAULT_CANDIDATE_SIZE);
-    std::env::set_var("RBL_CANDIDATE_SIZE", "abcd");
+    std::env::set_var("RKL_CANDIDATE_SIZE", "abcd");
     assert_eq!(get_candidate_size(), DEFAULT_CANDIDATE_SIZE);
 }

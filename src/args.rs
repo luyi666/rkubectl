@@ -2,7 +2,7 @@ use clap::{Clap, IntoApp};
 use clap_generate::{generate, generators::*};
 
 // in line with the [[bin]] name in Cargo.toml
-static BIN_NAME: &str = "rbl";
+static BIN_NAME: &str = "rkl";
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Command {
     /// Show description of a pod
@@ -15,6 +15,8 @@ pub enum Command {
     CONTAINER {name: String},
     /// Show log
     LOG {name: String},
+    /// Execute a command in a container
+    EXEC {name: String},
 }
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Shell {
@@ -61,7 +63,7 @@ fn test_command() {
             middle: None,
             cmd: Some(Command::DELETE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["rbl", "delete", "sophon"])
+        Args::parse_from(&["rkl", "delete", "sophon"])
     );
     assert_eq!(
         Args {
@@ -69,7 +71,7 @@ fn test_command() {
             middle: None,
             cmd: Some(Command::IMAGE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["rbl", "image", "sophon"])
+        Args::parse_from(&["rkl", "image", "sophon"])
     );
     assert_eq!(
         Args {
@@ -77,7 +79,7 @@ fn test_command() {
             middle: None,
             cmd: Some(Command::DESCRIBE {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["rbl", "describe", "sophon"])
+        Args::parse_from(&["rkl", "describe", "sophon"])
     );
     assert_eq!(
         Args {
@@ -85,6 +87,6 @@ fn test_command() {
             middle: None,
             cmd: Some(Command::CONTAINER {name: "sophon".to_string()}),
         },
-        Args::parse_from(&["rbl", "container", "sophon"])
+        Args::parse_from(&["rkl", "container", "sophon"])
     );
 }
