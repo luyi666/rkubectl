@@ -15,6 +15,8 @@ pub enum Command {
     CONTAINER {name: String},
     /// Show log
     LOG {name: String},
+    /// Execute a command in a container
+    EXEC {name: String},
 }
 #[derive(Clap, Clone, PartialEq, Debug)]
 pub enum Shell {

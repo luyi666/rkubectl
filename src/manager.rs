@@ -88,6 +88,7 @@ impl Manager {
                 Command::IMAGE {name} => name,
                 Command::CONTAINER {name} => name,
                 Command::LOG {name} => name,
+                Command::EXEC {name} => name,
             }
         };
         let pod_name_slice = get_pod_name();
@@ -214,6 +215,7 @@ fn get_kub_command(command: &Command, pod_name: &str) -> String {
         Command::LOG {name: _} => format!("{} logs {}", KUB_CTL, pod_name),
         Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", KUB_CTL, pod_name),
         Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
+        Command::EXEC {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
     }
 }
 
