@@ -215,7 +215,7 @@ fn get_kub_command(command: &Command, pod_name: &str) -> String {
         Command::LOG {name: _} => format!("{} logs {}", KUB_CTL, pod_name),
         Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", KUB_CTL, pod_name),
         Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
-        Command::EXEC {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
+        Command::EXEC {name: _} => format!("{} exec -it {}", KUB_CTL, pod_name),
     }
 }
 
