@@ -12,16 +12,16 @@ use str_distance::{DistanceMetric, Jaccard};
 use regex::Regex;
 
 pub struct Manager {
-    args: Args
+    args: Args,
+    kub: String,
 }
 
-// check `which kubectl` && configure your kubectl command
-static KUB_CTL: &str = "kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem --client-certificate=/srv/kubernetes/admin.pem  --client-key=/srv/kubernetes/admin-key.pem";
 static MAX_CANDIDATE_SIZE: usize = 25;
 static DEFAULT_CANDIDATE_SIZE: usize = 5;
+static DEFAULT_KUBECTL_CMD: &str = "kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem --client-certificate=/srv/kubernetes/admin.pem  --client-key=/srv/kubernetes/admin-key.pem";
 
 // PodInfo with kubectl get po -owide
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PodInfo {
     name: String,
     ready: String,
@@ -59,7 +59,8 @@ impl fmt::Display for PodInfo {
 
 impl Manager {
     pub fn new(args: Args) -> Self {
-        Manager { args }
+        let kub = get_kub(&args);
+        Manager { args, kub }
     }
 
     pub fn run(&self) -> Result<String> {
@@ -87,7 +88,7 @@ impl Manager {
                 Command::DESCRIBE {name} => name,
                 Command::IMAGE {name} => name,
                 Command::CONTAINER {name} => name,
-                Command::LOG {name} => name,
+                Command::LOGS {name} => name,
                 Command::EXEC {name} => name,
             }
         };
@@ -100,30 +101,30 @@ impl Manager {
             pod_name_slice.to_string()
         };
         let pod_name_slice = &pod_name_slice;
-        let candidate_pods = self.get_candidate_pod(pod_name_slice, false);
+        let all_pods = self.list_pods();
+        let candidate_pods = self.get_candidate_pod(all_pods.to_vec(), pod_name_slice, false);
         if candidate_pods.len() == 0 {
             log::info!("no such a pod named like {} found!", pod_name_slice);
             log::info!("trying fuzzy match...");
-            let candidate_pods_fuzzy = self.get_candidate_pod(pod_name_slice, true);
+            let candidate_pods_fuzzy = self.get_candidate_pod(all_pods.to_vec(), pod_name_slice, true);
             if candidate_pods_fuzzy.len() == 0 {
                 log::info!("fuzzy match has no results...");
                 process::exit(0);
             } else {
-                handle_multiple_results(command, candidate_pods_fuzzy)
+                handle_multiple_results(&self.kub[..], command, candidate_pods_fuzzy)
             }
         }
         else if candidate_pods.len() > 1 {
             log::info!("multiple pods named like {} found!", pod_name_slice);
             log::info!("possible choices:");
-            handle_multiple_results(command, candidate_pods)
+            handle_multiple_results(&self.kub[..], command, candidate_pods)
         }
         else {
-            vec![get_kub_command(command, &candidate_pods[0].name[..])]
+            vec![get_kub_command(&self.kub[..], command, &candidate_pods[0].name[..])]
         }
     }
 
-    fn get_candidate_pod(&self, pod_name_slice: &str, fuzzy_match: bool) -> Vec<PodInfo> {
-        let all_pods = self.list_pods();
+    fn get_candidate_pod(&self, all_pods: Vec<PodInfo>, pod_name_slice: &str, fuzzy_match: bool) -> Vec<PodInfo> {
         if !fuzzy_match {
             all_pods.into_iter().filter(
                 |pod_info| pod_info.name.contains(pod_name_slice)
@@ -161,12 +162,19 @@ impl Manager {
             kub_info
         } else {
             // release code
+            let cmd = format!("{} get po -owide | tail -n+2", self.kub);
+            log::info!("{}", cmd);
             let output = std::process::Command::new("sh")
-                        .arg("-c")
-                        .arg(format!("{} get po -owide | tail -n+2", KUB_CTL))
-                        .output()
-                        .expect("failed to execute kubectl get po");
-            String::from_utf8_lossy(&output.stdout).to_string().trim().split("\n").map(convert_to_kub_info).collect()
+                .arg("-c")
+                .arg(&cmd)
+                .output()
+                .expect("failed to execute cmd");
+            let output_message = String::from_utf8_lossy(&output.stdout).to_string();
+            if output_message.trim().is_empty() {
+                Vec::new()
+            } else {
+                output_message.trim().split("\n").map(convert_to_kub_info).collect()
+            }
         }
     }
 }
@@ -177,7 +185,7 @@ fn convert_to_kub_info(s: &str) -> PodInfo {
     pod_info
 }
 
-fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<String> {
+fn handle_multiple_results(kub: &str, cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<String> {
     // get candidate size
     let candidate_size = get_candidate_size();
     log::info!("you are getting candidate size of {}, try to alter env RKL_CANDIDATE_SIZE to view more", candidate_size);
@@ -198,24 +206,24 @@ fn handle_multiple_results(cmd: &Command, candidate_pods: Vec<PodInfo>) -> Vec<S
         if input_char == 'z' {
             let mut kub_cmds = Vec::new();
             for candidate_idx in 0..candidate_size {
-                kub_cmds.push(get_kub_command(cmd, &candidate_pods[candidate_idx].name[..]));
+                kub_cmds.push(get_kub_command(kub, cmd, &candidate_pods[candidate_idx].name[..]));
             }
             kub_cmds
         } else {
             let choice_index = choices.chars().position(|c| c == input_char).unwrap();
-            vec![get_kub_command(cmd, &candidate_pods[choice_index].name[..])]
+            vec![get_kub_command(kub, cmd, &candidate_pods[choice_index].name[..])]
         }
     }
 }
 
-fn get_kub_command(command: &Command, pod_name: &str) -> String {
+fn get_kub_command(kub: &str, command: &Command, pod_name: &str) -> String {
     match command {
-        Command::DELETE {name: _} => format!("{} delete po {}", KUB_CTL, pod_name),
-        Command::DESCRIBE {name: _} => format!("{} describe po {}", KUB_CTL, pod_name),
-        Command::LOG {name: _} => format!("{} logs {}", KUB_CTL, pod_name),
-        Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", KUB_CTL, pod_name),
-        Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", KUB_CTL, pod_name),
-        Command::EXEC {name: _} => format!("{} exec -it {}", KUB_CTL, pod_name),
+        Command::DELETE {name: _} => format!("{} delete po {}", kub, pod_name),
+        Command::DESCRIBE {name: _} => format!("{} describe po {}", kub, pod_name),
+        Command::LOGS {name: _} => format!("{} logs {}", kub, pod_name),
+        Command::IMAGE {name: _} => format!("{} describe po {} | grep Image", kub, pod_name),
+        Command::CONTAINER {name: _} => format!("{} describe po {} | grep container", kub, pod_name),
+        Command::EXEC {name: _} => format!("{} exec -it {}", kub, pod_name),
     }
 }
 
@@ -282,4 +290,22 @@ fn test_get_candiate_size() {
     assert_eq!(get_candidate_size(), DEFAULT_CANDIDATE_SIZE);
     std::env::set_var("RKL_CANDIDATE_SIZE", "abcd");
     assert_eq!(get_candidate_size(), DEFAULT_CANDIDATE_SIZE);
+}
+
+pub fn get_kub(args: &Args) -> String {
+    match &args.kubectl {
+        Some(k) => k.clone(),
+        _ => DEFAULT_KUBECTL_CMD.to_string(),
+    }
+}
+
+#[test]
+fn test_get_kubectl_cmd() {
+    let args = Args {
+        completion: None,
+        middle: None,
+        kubectl: Some("kubectl".to_string()),
+        cmd: Some(Command::CONTAINER {name: "sophon".to_string()}),
+    };
+    assert_eq!(get_kub(&args), "kubectl".to_string());
 }
