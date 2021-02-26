@@ -14,7 +14,7 @@ pub enum Command {
     /// Show docker container id within a pod
     CONTAINER {name: String},
     /// Show log
-    LOG {name: String},
+    LOGS {name: String},
     /// Execute a command in a container
     EXEC {name: String},
 }
@@ -39,6 +39,9 @@ pub struct Args {
     /// Insert a middle name between component and version number (kg2 -> kg-sophon2, with middle name "-sophon")
     #[clap(long, short)]
     pub middle: Option<String>,
+    /// Set your own `kubectl` command, alias kubectl
+    #[clap(long, short)]
+    pub kubectl: Option<String>,
 }
 
 impl Shell {
@@ -61,6 +64,7 @@ fn test_command() {
         Args {
             completion: None,
             middle: None,
+            kubectl: None,
             cmd: Some(Command::DELETE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rkl", "delete", "sophon"])
@@ -69,6 +73,7 @@ fn test_command() {
         Args {
             completion: None,
             middle: None,
+            kubectl: None,
             cmd: Some(Command::IMAGE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rkl", "image", "sophon"])
@@ -77,6 +82,7 @@ fn test_command() {
         Args {
             completion: None,
             middle: None,
+            kubectl: None,
             cmd: Some(Command::DESCRIBE {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rkl", "describe", "sophon"])
@@ -85,6 +91,7 @@ fn test_command() {
         Args {
             completion: None,
             middle: None,
+            kubectl: None,
             cmd: Some(Command::CONTAINER {name: "sophon".to_string()}),
         },
         Args::parse_from(&["rkl", "container", "sophon"])

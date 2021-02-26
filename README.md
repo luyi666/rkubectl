@@ -10,7 +10,7 @@ It is tedious to inspect pod info when the number of pods is large. This project
 * `delete a pod`
 * `describe a pod`  
 * `show image of a pod`
-* `show log of a pod`
+* `show logs of a pod`
 
 You can show help message with `rkl -h`
 ```
@@ -36,7 +36,7 @@ SUBCOMMANDS:
     describe     Show description of a pod
     help         Prints this message or the help of the given subcommand(s)
     image        Show image of a pod
-    log          Show log
+    logs         Show log
 ```
 
 ### match with partial pod name
@@ -49,18 +49,18 @@ This name is searched in two stages:
 ### output message
 Output message of `rkl` command is sent to stdout, that is, safe to redirect.  
 Logs and error messages are sent to stderr.  
-You can either try `rkl log xxx > xxx.log` or `rkl log xxx | less`
+You can either try `rkl logs xxx > xxx.log` or `rkl logs xxx | less`
 
 ### sophon users
 For sophon products, like kg, base, notebook, jobmanager and so on, a `sophon` middle name is needed.
-`alias rkl='rkl -m="-sophon"'`
+`alias rkls='rkl -m="-sophon"'`
 For example, 
 ```
-[root@kg-node43 ~]# rkl image kg2
+[root@kg-node43 ~]# rkls image kg2
 kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem --client-certificate=/srv/kubernetes/admin.pem  --client-key=/srv/kubernetes/admin-key.pem describe po sophon-kg-sophon2-bf9769d97-fgpnn | grep Image
     Image:         transwarp/sophon-kg:sophon-3.0
     Image ID:      docker-pullable://transwarp/sophon-kg@sha256:b0d6cdba486aca63a5b873f8bbd0ef9f0dbcca27a262bc1d6dfe0947dee58f50
 ```
-`rkl image kg2` is translated to `rkl -m="-sophon" image kg2` by aliasing. `kg2` is further translated to `kg-sophon2` behind the scenes.  
+`rkls image kg2` is translated to `rkl -m="-sophon" image kg2` by aliasing. `kg2` is further translated to `kg-sophon2` behind the scenes.  
 
 This project is mainly inspired by [ripgrep](https://github.com/BurntSushi/ripgrep) and [grab-xkcd](https://github.com/kbknapp/grab-xkcd/tree/completions-rt).
