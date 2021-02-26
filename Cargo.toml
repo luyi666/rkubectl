@@ -1,5 +1,5 @@
 [package]
-name = "rkubctl"
+name = "rkubectl"
 version = "0.1.0"
 authors = ["luyi666 <ly921225@gmail.com>"]
 edition = "2018"
