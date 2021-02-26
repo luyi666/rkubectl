@@ -11,6 +11,7 @@ It is tedious to inspect pod info when the number of pods is large. This project
 * `describe a pod`  
 * `show image of a pod`
 * `show logs of a pod`
+* `exec into a pod` (experimental)
 
 You can show help message with `rkl -h`
 ```
@@ -27,6 +28,7 @@ FLAGS:
 OPTIONS:
     -c, --completion <SHELL>    Generate a SHELL completion script and print to stdout [possible
                                 values: bash, zsh, fish, power-shell, elvish]
+    -k, --kubectl <kubectl>     Set your own `kubectl` command, alias kubectl
     -m, --middle <middle>       Insert a middle name between component and version number (kg2 ->
                                 kg-sophon2, with middle name "-sophon")
 
@@ -34,6 +36,7 @@ SUBCOMMANDS:
     container    Show docker container id within a pod
     delete       Delete a pod
     describe     Show description of a pod
+    exec         Execute a command in a container
     help         Prints this message or the help of the given subcommand(s)
     image        Show image of a pod
     logs         Show log
@@ -51,6 +54,19 @@ Output message of `rkl` command is sent to stdout, that is, safe to redirect.
 Logs and error messages are sent to stderr.  
 You can either try `rkl logs xxx > xxx.log` or `rkl logs xxx | less`
 
+### shell completion
+It is recommanded to adopt shell completion, so that one can use `rkl` by hitting tab for auto completion instead of typing the full command. Take bash shell as an example.  
+First produce the completion script,
+```
+rkl -c bash > ~/.rkl_complete.sh
+```
+then source it in ~/.bash_profile
+```bash
+if [ -f ~/.rkl_complete.sh ]; then
+        . ~/.rkl_complete.sh
+fi
+```
+
 ### sophon users
 For sophon products, like kg, base, notebook, jobmanager and so on, a `sophon` middle name is needed.
 `alias rkls='rkl -m="-sophon"'`
@@ -63,4 +79,5 @@ kubectl -s https://127.0.0.1:6443 --certificate-authority=/srv/kubernetes/ca.pem
 ```
 `rkls image kg2` is translated to `rkl -m="-sophon" image kg2` by aliasing. `kg2` is further translated to `kg-sophon2` behind the scenes.  
 
+## Acknowledgement
 This project is mainly inspired by [ripgrep](https://github.com/BurntSushi/ripgrep) and [grab-xkcd](https://github.com/kbknapp/grab-xkcd/tree/completions-rt).
